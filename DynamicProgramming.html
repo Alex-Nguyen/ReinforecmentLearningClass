@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Reinforcement Learning Project</title>
+    <script src="libs/d3.v5.min.js"></script>
+</head>
+<body>
+<div id="background">
+    <svg id="gridworld" width="1024px" height="512px"></svg>
+</div>
+<div>
+    Epoch: <span id="epoch">10</span>
+</div>
+</body>
+<script>
+    const center_LAT = 33.5845,
+        center_LON = -101.875;
+    const ACTION_PROB = 0.25;
+    const discount =1;
+    const _actions = [[0, -1], [-1, 0], [0, 1], [1, 0]];
+    const rescuer = {x:149, y:55};
+    const actions = {
+        "up":[0,-1],
+        "left": [-1,0],
+        "down":[0,1],
+        "right":[1,0]
+    };
+    const config = {
+        zoom: 15,
+        speed: 1,
+        agent: {x: -206, y: 248.44, z: 0},
+        plane: {width: 1024, height: 512},
+        grid: {
+            rows: 128,
+            cols: 256,
+            cellSize: 4,
+            centerX: 512,
+            centerY: 256
+        }
+    };
+    const Maptexture = (lon, lat, zoom) => {
+        return `https://api.mapbox.com/styles/v1/mapbox/light-v9/static/${lon},${lat},${zoom},0,0/1024x512?access_token=pk.eyJ1IjoidmluaG50IiwiYSI6ImNqb2VqdXZvaDE4cnkzcG80dXkxZzlhNWcifQ.G6sZ1ukp_DhiSmCvgKblVQ`;
+    };
+    const deg2rad = deg => {
+        return deg * (Math.PI / 180);
+    };
+    const mercatorY = lat => {
+        lat = deg2rad(lat);
+        return (
+            (256 / Math.PI) *
+            Math.pow(2, config.zoom) *
+            (Math.PI - Math.log(Math.tan(Math.PI / 4 + lat / 2)))
+        );
+    };
+    const mercatorX = lon => {
+        lon = deg2rad(lon);
+        return (256 / Math.PI) * Math.pow(2, config.zoom) * (lon + Math.PI);
+    };
+    const boardGrid = (rows, cols) => {
+        let boards = [];
+        for (let y = 0; y < rows; y++) {
+            boards[y] = [];
+            for (let x = 0; x < cols; x++) {
+                boards[y][x] = 0;
+            }
+        }
+        return boards;
+    };
+    const lonToGridX = lon => {
+        return mercatorX(lon) - cx + config.grid.centerX;
+    };
+    const latToGridY = lat => {
+        return mercatorY(lat) - cy + config.grid.centerY;
+    };
+    const cx = mercatorX(center_LON);
+    const cy = mercatorY(center_LAT);
+    const updateGrid = (boards, highways) => {
+        for (let highway of highways) {
+            for (let n = 0; n < highway.nodes.length - 1; n++) {
+                let x1 = mercatorX(highway.nodes[n].ref.lon) - cx + config.grid.centerX;
+                let y1 = mercatorY(highway.nodes[n].ref.lat) - cy + config.grid.centerY;
+
+                let x2 =
+                    mercatorX(highway.nodes[n + 1].ref.lon) - cx + config.grid.centerX;
+                let y2 =
+                    mercatorY(highway.nodes[n + 1].ref.lat) - cy + config.grid.centerY;
+
+                let distance = Math.sqrt(Math.pow(x2 - x1, 2) + Math.pow(y2 - y1, 2));
+                let directionX = x2 - x1;
+                let directionY = y2 - y1;
+
+                let signX = Math.sign(directionX);
+                let signY = Math.sign(directionY);
+                let deltaX = directionX / distance;
+                let deltaY = directionY / distance;
+                for (
+                    let x = x1, y = y1;
+                    ;
+                    x = x + deltaX * config.speed, y = y + deltaY * config.speed
+                ) {
+                    if (signX === Math.sign(x2 - x) && signY === Math.sign(y2 - y)) {
+                        let rowY = Math.round(y / config.grid.cellSize);
+                        let colX = Math.round(x / config.grid.cellSize);
+                        if (
+                            colX >= 0 &&
+                            colX < config.grid.cols &&
+                            rowY >= 0 &&
+                            rowY < config.grid.rows
+                        ) {
+                            boards[rowY][colX] = 1;
+                        }
+                    } else {
+                        break;
+                    }
+                }
+            }
+        }
+
+        return boards;
+    };
+    var grid = boardGrid(config.grid.rows, config.grid.cols);
+    var valueFunction = boardGrid(config.grid.rows, config.grid.cols)
+    d3.xml("data/bigarea.xml", (error, data) => {
+    }).then(result => {
+
+        let nodeRef = [].map.call(result.querySelectorAll("node"), n => ({
+            id: n.getAttribute("id"),
+            lat: n.getAttribute("lat"),
+            lon: n.getAttribute("lon")
+        }));
+        ///Way lists
+        let ways = [].map.call(result.querySelectorAll("way"), way => ({
+            id: way.getAttribute("id"),
+            nodes: [].map.call(way.querySelectorAll("nd"), ref => ({
+                ref: nodeRef.find(obj => obj.id === ref.getAttribute("ref"))
+            })),
+            type: [].map.call(way.querySelectorAll("tag"), tag => tag.getAttribute("k"))
+        }));
+
+        let buildings = ways.filter(way => way.type.includes("building"));
+        let highways = ways.filter(way => way.type.includes("highway"));
+
+
+        grid = updateGrid(grid, highways);
+        function getNextState(currState, action) {
+            var nextState, reward=0;
+            let nextRindex = currState.r + action[0];
+            let nextCindex = currState.c + action[1];
+            // if out of bound
+            if(nextRindex <0 || nextRindex >= config.grid.rows || nextCindex <0 || nextCindex >=config.grid.cols || grid[nextRindex][nextCindex]===0){
+                reward =-1
+                nextState = currState
+            }else{
+                reward =0
+                nextState ={r:nextRindex, c:nextCindex}
+            }
+
+            if(nextRindex ===rescuer.y && nextCindex ===rescuer.x){
+                reward = 50;
+            }
+            return {nextState, reward}
+        }
+        let iteration = 0;
+        while(true){
+            let oldvalues =JSON.parse(JSON.stringify(valueFunction))
+            grid.forEach(function (rows, r_index) {
+                rows.forEach((col, c_index)=>{
+                    if(r_index===rescuer.y && c_index===rescuer.x){
+                        //valueFunction[r_index][c_index] =50
+                    }else{
+                        let _value = 0;
+                        _actions.forEach(a=>{
+                            let ret = getNextState({r:r_index, c:c_index},a);
+                            _value += ACTION_PROB*(ret.reward + 0.9*valueFunction[ret.nextState.r][ret.nextState.c])
+                        });
+                        valueFunction[r_index][c_index] = _value;
+                    }
+                })
+            })
+            iteration++;
+            let delta = 0;
+            grid.forEach(function (rows, r_index) {
+                rows.forEach((col, c_index)=>{
+                    delta = Math.max(delta, Math.abs(valueFunction[r_index][c_index]- oldvalues[r_index][c_index]))
+                })
+            });
+            if(delta <0.01 || iteration > 200){
+                draw()
+                break
+            }
+        }
+
+
+        function draw() {
+            let _min = d3.min(valueFunction, function (rows) {
+                return d3.min(rows)
+            })
+
+            let _max = d3.max(valueFunction, function (rows) {
+                return d3.max(rows, r=>r)
+            })
+            console.log(_min,_max)
+            var myColor = d3.scaleLinear().domain([_min,_max])
+                .range(["white", "blue"])
+            let bg = document.getElementById('background');
+            bg.style.width = '1024px';
+            bg.style.height = '512px';
+            bg.style.backgroundImage = `url(${Maptexture(center_LON, center_LAT, config.zoom)})`;
+            let svg = d3.select("#gridworld")
+            for (let r = 0; r < 128; r++) {
+                for (let c = 0; c < 256; c++) {
+                    svg.append('rect')
+                        .attr('x', c * 4)
+                        .attr('id',`pos-${r}-${c}`)
+                        .attr('y', r * 4)
+                        .on("click",function () {
+                            animate(r,c)
+                        })
+                        .attr('width', '3px')
+                        .attr("height", '3px')
+                        .style('fill', function () {
+                            let color = 'rgba(0,0,0,0.1)';
+                            if(grid[r][c] === 1){
+                                color = myColor(valueFunction[r][c])
+                            }
+                            return color
+                        })
+                }
+            }
+            function getBestAction(r,c) {
+                let tracked = []
+                _actions.forEach(a=>{
+                    let ret = getNextState({r:r, c:c},a);
+                    tracked.push(valueFunction[ret.nextState.r][ret.nextState.c])
+                });
+                let index = tracked.indexOf(Math.max(...tracked));
+                return _actions[index]
+
+            }
+            function animate(r,c) {
+                d3.select(`#pos-${r}-${c}`).style('fill','red');
+                let tempR = r, tempC = c;
+                let steps = 100;
+                let simulator = setInterval(function () {
+                    let a = getBestAction(tempR, tempC);
+                    let ret = getNextState({r:tempR, c:tempC},a);
+                    // // console.log(`Action: ${a} - value: `, actions[a]);
+                    d3.select(`#pos-${ret.nextState.r}-${ret.nextState.c}`).style('fill','red')
+                    tempR = ret.nextState.r;
+                    tempC = ret.nextState.c;
+                    // agent = getNextState(actions[a], agent);
+                    // d3.select(`#pos-${agent.x}-${agent.y}`).style('fill','blue');
+                    // if(agent.x ===rescuer.x&&agent.y===rescuer.y){
+                    //     valueFunction[agent.x][agent.y]=1;
+                    //     clearInterval(simulator);
+                    //     updateValueFuc()
+                    // }
+                    // trackedAction.push(agent)
+                    // steps--;
+                    if(steps < 1){
+                        clearInterval(simulator)
+                    }
+                },10)
+            }
+        }
+
+    });
+
+
+</script>
+</html>

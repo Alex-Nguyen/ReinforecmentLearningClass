@@ -1,7 +1,8 @@
 const center_LAT = 33.5845,
     center_LON = -101.875;
 var trackedAction =[];
-
+const ACTION_PROB = 0.25;
+const discount =1;
 const actions = {
     "up":[0,-1],
     "left": [-1,0],
@@ -158,7 +159,7 @@ d3.xml("data/bigarea.xml", (error, data) => {
            return actionList[Math.floor(Math.random()*actionList.length)]
        }
 
-       let steps =1000;
+       let steps =100;
 
        let simulator = setInterval(function () {
            let a = getAction();
@@ -178,7 +179,7 @@ d3.xml("data/bigarea.xml", (error, data) => {
                trackedAction =[];
                agent  ={x:59,y:139}
                document.getElementById('epoch').innerText= iterations
-               steps =1000;
+               steps =100;
                if(iterations===0){
                    clearInterval(simulator)
 

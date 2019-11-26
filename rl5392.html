@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Reinforcement Learning Project - Vinh Nguyen, Linh Manh</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.4.0/css/bootstrap.min.css" integrity="sha384-SI27wrMjH3ZZ89r4o+fGIJtnzkAnFs3E4qz9DIYioCQ5l9Rd/7UAa8DHcaL8jkWt" crossorigin="anonymous">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.11.2/css/all.min.css">
+
+
+    <!-- jquery and jqueryui -->
+    <script src="libs/jquery.min.js"></script>
+    <link href="external/jquery-ui.min.css" rel="stylesheet">
+    <script src="external/jquery-ui.min.js"></script>
+
+    <script src="libs/rl.js"></script>
+    <script src="libs/d3.v5.min.js"></script>
+    <style>
+        #svgdraw {
+            margin-left:auto;
+            margin-right:auto;
+            display:block;
+            margin-top: 80px;
+
+        }
+    </style>
+</head>
+<body>
+<div class="fixed-top mt-4">
+    <ul class="nav nav-pills nav-justified">
+        <li class="nav-item">
+            <button type="button" id="evaluatePolicy" class="btn btn-dark stage">Policy Evaluation</button>
+        </li>
+        <li class="nav-item">
+            <button type="button" id="updatePolicy" class="btn btn-dark stage">Policy Update</button>
+        </li>
+        <li class="nav-item">
+            <button type="button" id="toggleValIter" class="btn btn-dark stage">Toggle Value Iteration</button>
+        </li>
+        <li class="nav-item">
+            <button type="button" id="resetAll" class="btn btn-dark stage">Reset</button>
+        </li>
+        <li class="nav-item">
+            <a href="https://alex-nguyen.github.io/rescueAR/"><i class="fas fa-vr-cardboard"></i></a>
+        </li>
+        <li class="nav-item"><div id="rewardslider"></div></li>
+
+
+    </ul>
+</div>
+<div class="container">
+    <div id="draw">
+
+    </div>
+
+</div>
+</body>
+<script src="js/rl5392.js">
+
+</script>
+</html>
