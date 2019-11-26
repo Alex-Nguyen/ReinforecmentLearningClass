@@ -1,6 +1,6 @@
-# ReinforecmentLearningClass
+# ReinforecmentLearningClass (Final)
 
-https://alex-nguyen.github.io/ReinforecmentLearningClass/
+https://alex-nguyen.github.io/ReinforecmentLearningClass/rl5392.html
 
 # Fig 3.2 in book
 https://alex-nguyen.github.io/ReinforecmentLearningClass/Fig3_2.html
