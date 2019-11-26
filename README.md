@@ -13,4 +13,4 @@ https://alex-nguyen.github.io/ReinforecmentLearningClass/Fig4_1.html
 
 
 # Fig 5.1 in book
-https://alex-nguyen.github.io/ReinforecmentLearningClass/Fig5_1.html
+https://alex-nguyen.github.io/ReinforecmentLearningClass/Fig5.1.html
