@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Reinforcement Learning Fig 3.5</title>
+    <script src="https://d3js.org/d3.v5.min.js"></script>
+</head>
+<body>
+
+</body>
+<script>
+    const WORLDSIZE =4;
+    const ACTION_PROB = 0.25;
+    const discount =1;
+    const actions = [[0, -1], [-1, 0], [0, 1], [1, 0]];
+    const WIDTH = 650, HEIGHT = 500, padding = 10;
+    const RECTW = 600 / 4, RECTH = 450 / 4;
+    let gridWorld = createGridWorld(WORLDSIZE);
+    function nextState(state, action) {
+        var _nextState;
+        let _tempX = state[0] + action[0];
+        let _tempY = state[1] + action[1];
+        let reward = -1;
+        if(_tempX <0 || _tempX >=WORLDSIZE|| _tempY<0 || _tempY>= WORLDSIZE){
+            _nextState = state
+        }else{
+            _nextState = [_tempX, _tempY]
+        }
+        if((_tempX===0&&_tempY===0)||(_tempX===3&&_tempY===3)){
+            reward = 0
+        }
+
+        return {_nextState, reward}
+    }
+    function createGridWorld(size) {
+        let ret =[];
+        for(let r =0; r<size; r++){
+            let _row = [];
+            for(let c =0; c<size; c++){
+                _row.push(0)
+            }
+            ret.push(_row)
+        }
+        return ret;
+    }
+    let iteration = 0;
+    while(true){
+        let oldvalues =JSON.parse(JSON.stringify(gridWorld))
+        for(let i=0;i<WORLDSIZE; i++){
+            for(let j=0; j <WORLDSIZE; j++){
+                if((i===0&j===0) ||(i===3&&j===3)){
+                    continue;
+                }
+                let  state = [i,j];
+                let value =0;
+                actions.forEach(a=>{
+                    let ret = nextState(state, a);
+                    value += ACTION_PROB*(ret.reward + discount*gridWorld[ret._nextState[0]][ret._nextState[1]])
+                });
+                gridWorld[i][j] = value;
+            }
+        }
+        iteration++;
+        let delta = 0;
+        for(let i=0;i<WORLDSIZE; i++){
+            for(let j=0; j <WORLDSIZE; j++) {
+                delta = Math.max(delta, Math.abs(gridWorld[i][j]- oldvalues[i][j]))
+            }
+        }
+       if(delta <0.001){
+          draw()
+           break
+       }
+
+
+    }
+    function draw() {
+        let svg = d3.select("body").append('svg').attr("width", WIDTH).attr("height", HEIGHT);
+        let bg = svg.append('rect').attr("width", WIDTH).attr("height", HEIGHT).style('fill', "rgba(0,0,0,0.2)").style("stroke",'black');
+        gridWorld.forEach((r, ri) => {
+            r.forEach((col, ci) => {
+                svg.append("rect").attr("x", function (d,) {
+                    return ci * (RECTW + 10) +5
+                }).attr("y", function () {
+                    return ri * (RECTH + padding) +5
+                }).attr("width", RECTW + 'px').attr("height", RECTH + 'px').style("fill", 'white').attr("stroke",'black')
+                svg.append('text')
+                    .text(col.toFixed(2))
+                    .attr("x", function () {
+                        return ci * (RECTW + 10) + RECTW / 2.5
+                    })
+                    .attr("y", function () {
+                        return ri * (RECTH + padding) + RECTH / 1.5
+                    })
+            })
+        })
+    }
+</script>
+</html>

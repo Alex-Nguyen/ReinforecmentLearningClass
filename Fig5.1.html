@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Reinforcement Learning Fig 5.1</title>
+    <script src="https://d3js.org/d3.v5.min.js"></script>
+</head>
+<body>
+
+</body>
+<script>
+    const WORLDSIZE =4;
+    const ACTION_PROB = 0.25;
+    let RETURNS ={};
+    const discount =1;
+    const actions = [[0, -1], [-1, 0], [0, 1], [1, 0]];
+    const WIDTH = 650, HEIGHT = 500, padding = 10;
+    const RECTW = 600 / 4, RECTH = 450 / 4;
+    let gridWorld = createGridWorld(WORLDSIZE);
+    function nextState(state, action) {
+        var _nextState;
+        let _tempX = state[0] + action[0];
+        let _tempY = state[1] + action[1];
+        let reward = -1;
+        if(_tempX <0 || _tempX >=WORLDSIZE|| _tempY<0 || _tempY>= WORLDSIZE){
+            _nextState = state
+        }else{
+            _nextState = [_tempX, _tempY]
+        }
+        if((_tempX===0&&_tempY===0)||(_tempX===3&&_tempY===3)){
+            reward = 0
+        }
+
+        return {_nextState, reward}
+    }
+    function createGridWorld(size) {
+        let ret =[];
+        for(let r =0; r<size; r++){
+            let _row = [];
+            for(let c =0; c<size; c++){
+                _row.push(0)
+            }
+            ret.push(_row)
+        }
+        return ret;
+    }
+    let episode = 1000;
+    while(episode >0){
+        let episode_state =[];
+        let episode_actions =[];
+        let episode_rewards =[];
+        let randX = Math.floor(Math.random()*WORLDSIZE)
+        let randY = Math.floor(Math.random()*WORLDSIZE)
+        let state = [randX, randY];
+        episode_state.push(state)
+
+        let timestep = 100;
+        for(let i =0; i<timestep; i++){
+            let action =actions[Math.floor(Math.random()*actions.length)]
+            let ret = nextState(state, action);
+            episode_actions.push(action)
+            episode_rewards.push(ret.reward);
+            episode_state.push(ret._nextState)
+            state = ret._nextState;
+            if((ret._nextState[0]===0&&ret._nextState[1]===0)||(ret._nextState[0]===3&&ret._nextState[1]===3)){
+                break;
+            }
+        }
+        let G =0;
+        for(let t =episode_rewards.length-1; t>-1; t--){
+            let state = episode_state[t];
+            G = discount*G + episode_rewards[t];
+            let flag =false;
+            for(let s=0; s<t; s++){
+                if(episode_rewards[s][0]===state[0]&&episode_state[s][1]===state[1]){
+                    flag=true;
+                }
+            }
+            if(!flag){
+                if(RETURNS.hasOwnProperty(state)){
+                    RETURNS[state].push(G)
+                }else{
+                    RETURNS[state] = [G]
+                }
+                gridWorld[state[0]][state[1]] = d3.mean(RETURNS[state])
+            }
+
+        }
+
+        episode--;
+    }
+    draw()
+    function draw() {
+        let svg = d3.select("body").append('svg').attr("width", WIDTH).attr("height", HEIGHT);
+        let bg = svg.append('rect').attr("width", WIDTH).attr("height", HEIGHT).style('fill', "rgba(0,0,0,0.2)").style("stroke",'black');
+        gridWorld.forEach((r, ri) => {
+            r.forEach((col, ci) => {
+                svg.append("rect").attr("x", function (d,) {
+                    return ci * (RECTW + 10) +5
+                }).attr("y", function () {
+                    return ri * (RECTH + padding) +5
+                }).attr("width", RECTW + 'px').attr("height", RECTH + 'px').style("fill", 'white').attr("stroke",'black')
+                svg.append('text')
+                    .text(col.toFixed(2))
+                    .attr("x", function () {
+                        return ci * (RECTW + 10) + RECTW / 2.5
+                    })
+                    .attr("y", function () {
+                        return ri * (RECTH + padding) + RECTH / 1.5
+                    })
+            })
+        })
+    }
+
+</script>
+</html>

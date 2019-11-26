@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Reinforcement Learning Fig 3.2</title>
+    <script src="https://d3js.org/d3.v5.min.js"></script>
+
+</head>
+<body>
+
+</body>
+<script>
+    const WORLD_SIZE = 5;
+    const ACTION_PROB = 0.25;
+    const A_POS = {x: 0, y: 1};
+    const A_PRIME_POS = {x: 4, y: 1};
+    const B_POS = {x: 0, y: 3};
+    const B_PRIME_POS = {x: 2, y: 3};
+    const actions = [[0, -1], [-1, 0], [0, 1], [1, 0]];
+    const DISCOUNT = 0.9;
+    const WIDTH = 650, HEIGHT = 500, padding = 10;
+    const RECTW = 600 / 5, RECTH = 450 / 5;
+
+    /**
+     *
+     * @param state {x,y}
+     * @param action [0,1]
+     * @returns {{reward: *, nextState: *}|{reward: number, nextState: {x: *, y: *}}}
+     */
+    function step(state, action) {
+        let reward = 0;
+
+        if (state.x === A_POS.x && state.y === A_POS.y) {
+            return {
+                nextState: A_PRIME_POS,
+                reward: 10
+            }
+        }
+        if (state.x === B_POS.x && state.y === B_POS.y) {
+            return {
+                nextState: B_PRIME_POS,
+                reward: 5
+            }
+        }
+        let nextState = {
+            x: state.x + action[0],
+            y: state.y + action[1]
+        };
+        if (nextState.x < 0 || nextState.x >= WORLD_SIZE || nextState.y < 0 || nextState.y >= WORLD_SIZE
+        ) {
+            reward = -1;
+            nextState.x = state.x;
+            nextState.y = state.y
+        } else {
+            reward = 0;
+        }
+        return {
+            nextState: nextState,
+            reward: reward
+        }
+    }
+
+    function createGridWorld(worldSize) {
+        let ret = [];
+        for (let i = 0; i < worldSize; i++) {
+            let _row = [];
+            for (let j = 0; j < worldSize; j++) {
+                _row.push(0)
+            }
+            ret.push(_row)
+        }
+        return ret;
+    }
+
+    function sumAllValues(gridWorld) {
+        let val = 0;
+        for (let i = 0; i < WORLD_SIZE; i++) {
+            for (let j = 0; j < WORLD_SIZE; j++) {
+                val += gridWorld[i][j];
+            }
+        }
+        return val;
+    }
+
+    let valueFuction = createGridWorld(WORLD_SIZE);
+    let timeStep = 100;
+    while (timeStep > 0) {
+        let new_values = createGridWorld(WORLD_SIZE)
+        for (let i = 0; i < WORLD_SIZE; i++) {
+            for (let j = 0; j < WORLD_SIZE; j++) {
+                for (let a = 0; a < actions.length; a++) {
+                    let ret = step({x: i, y: j}, actions[a])
+                    new_values[i][j] += ACTION_PROB * (ret.reward + DISCOUNT * valueFuction[ret.nextState.x][ret.nextState.y])
+                }
+            }
+        }
+        let oldValue = sumAllValues(valueFuction);
+        let newValue = sumAllValues(new_values);
+        let diff = Math.abs(oldValue - newValue);
+        if (diff < 0.0001) {
+            draw()
+            break;
+        }
+        valueFuction = new_values.slice(0)
+        timeStep--;
+    }
+
+
+    function draw() {
+        let svg = d3.select("body").append('svg').attr("width", WIDTH).attr("height", HEIGHT);
+        let bg = svg.append('rect').attr("width", WIDTH).attr("height", HEIGHT).style('fill', "rgba(0,0,0,0.2)").style("stroke",'black');
+        valueFuction.forEach((r, ri) => {
+            r.forEach((col, ci) => {
+                svg.append("rect").attr("x", function (d,) {
+                    return ci * (RECTW + 10) +5
+                }).attr("y", function () {
+                    return ri * (RECTH + padding) +5
+                }).attr("width", RECTW + 'px').attr("height", RECTH + 'px').style("fill", 'white').attr("stroke",'black')
+                svg.append('text')
+                    .text(col.toFixed(2))
+                    .attr("x", function () {
+                        return ci * (RECTW + 10) + RECTW / 2.5
+                    })
+                    .attr("y", function () {
+                        return ri * (RECTH + padding) + RECTH / 1.5
+                    })
+            })
+        })
+    }
+</script>
+</html>
